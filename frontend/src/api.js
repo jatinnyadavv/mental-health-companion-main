@@ -1,6 +1,6 @@
 import { getSessionId } from './session';
 
-const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8000';
+const API_BASE = import.meta.env.VITE_API_BASE || 'https://mental-health-companion-main-3jav.vercel.app';
 
 async function request(endpoint, options = {}) {
   const url = `${API_BASE}${endpoint}`;
@@ -33,7 +33,7 @@ async function request(endpoint, options = {}) {
     return await res.json();
   } catch (err) {
     if (err.message && err.message.includes('Failed to fetch')) {
-      throw new Error('Could not connect to the companion server. Please make sure the backend is running at http://localhost:8000.');
+      throw new Error('Could not connect to the companion server. Please try again in a moment.');
     }
     throw err;
   }
