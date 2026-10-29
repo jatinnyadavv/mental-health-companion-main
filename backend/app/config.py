@@ -8,8 +8,12 @@ load_dotenv(BASE_DIR / ".env")
 
 class Settings:
     gemini_api_key: str = os.getenv("GEMINI_API_KEY", "")
-    gemini_model: str = os.getenv("GEMINI_MODEL") or "gemini-3.8-flash"
+    gemini_model: str = os.getenv("GEMINI_MODEL") or "gemini-3.5-flash-lite"
+    # Vercel's current GEMINI_MODEL may still be set to the legacy Flash ID.
+    if gemini_model == "gemini-3.5-flash":
+        gemini_model = "gemini-3.5-flash-lite"
     max_llm_calls: int = int(os.getenv("MAX_LLM_CALLS", "50"))
+    gemini_timeout_ms: int = int(os.getenv("GEMINI_TIMEOUT_MS", "15000"))
     
     # CORS origins as a comma-separated list. Always allow the deployed frontend;
     # CORS_ORIGINS can add local or other approved origins.

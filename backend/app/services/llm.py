@@ -1,6 +1,5 @@
 import json
 import logging
-import time
 from typing import Tuple
 from ..config import settings, BUDGET_FALLBACK, LLM_ERROR_FALLBACK, CRISIS_REPLY
 from .prompts import SYSTEM_PROMPT
@@ -16,7 +15,15 @@ def get_genai_client():
     if _genai_client is None:
         if settings.gemini_api_key:
             from google import genai
-            _genai_client = genai.Client(api_key=settings.gemini_api_key)
+            from google.genai import types
+
+            _genai_client = genai.Client(
+                api_key=settings.gemini_api_key,
+                http_options=types.HttpOptions(
+                    timeout=settings.gemini_timeout_ms,
+                    retry_options=types.HttpRetryOptions(attempts=1),
+                ),
+            )
     return _genai_client
 
 def set_genai_client(mock_client):
@@ -70,33 +77,26 @@ def call_gemini_chat(messages: list[dict]) -> Tuple[str, bool, int]:
             merged_contents.append(turn)
     formatted_contents = merged_contents
 
-    attempts = 2
-    raw_response_text = ""
-    for attempt in range(attempts):
-        try:
-            from google.genai import types
-            
-            # Using types.GenerateContentConfig for system instruction & JSON response
-            config = types.GenerateContentConfig(
-                system_instruction=SYSTEM_PROMPT,
-                temperature=0.7,
-                max_output_tokens=400,
-                response_mime_type="application/json",
-            )
-            
-            response = client.models.generate_content(
-                model=settings.gemini_model,
-                contents=formatted_contents,
-                config=config,
-            )
-            raw_response_text = response.text.strip() if response.text else ""
-            break
-        except Exception as e:
-            logger.warning(f"Gemini API attempt {attempt + 1} failed: {e}")
-            if attempt < attempts - 1:
-                time.sleep(1.0)
-            else:
-                return LLM_ERROR_FALLBACK, False, remaining
+    try:
+        from google.genai import types
+
+        config = types.GenerateContentConfig(
+            system_instruction=SYSTEM_PROMPT,
+            max_output_tokens=512,
+            response_mime_type="application/json",
+            thinking_config=types.ThinkingConfig(thinking_level="minimal"),
+        )
+
+        response = client.models.generate_content(
+            model=settings.gemini_model,
+            contents=formatted_contents,
+            config=config,
+        )
+        raw_response_text = response.text.strip() if response.text else ""
+    except Exception as e:
+        # Do not log exception text: SDK errors can contain request details.
+        logger.warning("Gemini API call failed (%s)", type(e).__name__)
+        return LLM_ERROR_FALLBACK, False, remaining
 
     # Account for the successful call
     new_total = db.increment_llm_calls()
@@ -119,7 +119,7 @@ def call_gemini_chat(messages: list[dict]) -> Tuple[str, bool, int]:
         
         return reply, False, remaining
     except Exception as e:
-        logger.info(f"JSON parse fallback for model output: {e}")
+        logger.info("Gemini returned invalid JSON (%s)", type(e).__name__)
         # Raw text fallback
         if raw_response_text:
             return raw_response_text, False, remaining

@@ -1,5 +1,3 @@
-import joblib
-import pandas as pd
 import warnings
 from pathlib import Path
 from ..config import settings, TOP_COUNTRIES
@@ -10,6 +8,8 @@ _model = None
 def get_model():
     global _model
     if _model is None:
+        import joblib
+
         model_path = Path(settings.model_path)
         if not model_path.exists():
             # Fallback to root or look relatively
@@ -21,7 +21,9 @@ def get_model():
             _model = joblib.load(str(model_path))
     return _model
 
-def _format_input_row(inputs: dict) -> pd.DataFrame:
+def _format_input_row(inputs: dict):
+    import pandas as pd
+
     country = inputs.get("country", "Other")
     country_group = country if country in TOP_COUNTRIES else "Other"
     

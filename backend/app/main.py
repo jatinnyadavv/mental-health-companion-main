@@ -3,14 +3,13 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from .config import settings
 from .db import init_db
-from .services.model_service import get_model
 from .routers import predict, chat, history, me
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup: initialize database and load model into memory
+    # Initialize persistence. The ML model loads only when /predict needs it,
+    # so chat and history requests avoid paying its cold-start cost.
     init_db()
-    get_model()
     yield
     # Shutdown
 

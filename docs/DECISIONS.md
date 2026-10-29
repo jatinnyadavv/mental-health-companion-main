@@ -50,5 +50,15 @@
 ## 6. UI Elevation & Gemini Model Stabilization
 - **Decision**: Upgrade UI with modern frosted glass surfaces, breathing halo, tactile range controls, gradient trend lines, and curved chat bubbles. Switched backend model identifier to `gemini-3.5-flash`.
 - **Rationale**:
-  - `gemini-3.8-flash` experienced temporary 503 high-demand errors from Google's servers; `gemini-3.5-flash` delivers instant sub-2s responses with 100% uptime.
+  - `gemini-3.8-flash` experienced temporary 503 high-demand errors from Google's servers; the legacy `gemini-3.5-flash` selection is now superseded by the latency settings in section 7.
   - Enhanced visual appeal significantly without breaking the calm, minimalist single-column design rules.
+
+---
+
+## 7. Chat Latency Controls
+- **Decision**: Use `gemini-3.5-flash-lite` with minimal thinking, cap replies at 512 output tokens, and set a 15-second Gemini request timeout with no automatic retries.
+- **Rationale**:
+  - Short supportive replies do not need a high reasoning budget or long retries; Flash-Lite is Google's lower-latency option for high-throughput requests.
+  - Map an existing `GEMINI_MODEL=gemini-3.5-flash` setting to Flash-Lite, so deployed environment variables do not keep selecting the legacy model.
+  - Load the ML model only when `/predict` is called so chat, history, and health requests avoid model deserialization during serverless cold starts.
+  - Set a 30-second Vercel function limit and a 20-second browser chat timeout so slow requests return a useful fallback instead of waiting indefinitely.
