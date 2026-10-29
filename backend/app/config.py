@@ -19,7 +19,16 @@ class Settings:
     if _raw_db_path == ":memory:" or Path(_raw_db_path).is_absolute():
         database_path: str = _raw_db_path
     else:
-        database_path: str = str((BASE_DIR / _raw_db_path).resolve())
+        # On Vercel (serverless) only /tmp is writable; fall back to it automatically
+        local_path = BASE_DIR / _raw_db_path
+        if not local_path.parent.exists():
+            try:
+                local_path.parent.mkdir(parents=True, exist_ok=True)
+                database_path: str = str(local_path.resolve())
+            except OSError:
+                database_path: str = "/tmp/app.db"
+        else:
+            database_path: str = str(local_path.resolve())
 
     _raw_model_path: str = os.getenv("MODEL_PATH", str(BASE_DIR / "app" / "models" / "Mental_Health_Model.pkl"))
     model_path: str = _raw_model_path if Path(_raw_model_path).is_absolute() else str((BASE_DIR / _raw_model_path).resolve())
