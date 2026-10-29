@@ -11,9 +11,13 @@ class Settings:
     gemini_model: str = os.getenv("GEMINI_MODEL") or "gemini-3.8-flash"
     max_llm_calls: int = int(os.getenv("MAX_LLM_CALLS", "50"))
     
-    # CORS origins as comma-separated or list
+    # CORS origins as a comma-separated list. Always allow the deployed frontend;
+    # CORS_ORIGINS can add local or other approved origins.
     cors_origins_raw: str = os.getenv("CORS_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173")
     cors_origins: list[str] = [origin.strip() for origin in cors_origins_raw.split(",") if origin.strip()]
+    production_frontend_origin = "https://mental-health-companion-main-gules.vercel.app"
+    if production_frontend_origin not in cors_origins:
+        cors_origins.append(production_frontend_origin)
     
     _raw_db_path: str = os.getenv("DATABASE_PATH", "data/app.db")
     if _raw_db_path == ":memory:" or Path(_raw_db_path).is_absolute():
